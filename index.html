@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Clicker Game Pro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="goldenCookie" class="golden-cookie"><i class="fas fa-star"></i></div>
+
+    <div id="achievementPopup" class="achievement-popup">
+        <div class="ach-icon"><i class="fas fa-trophy"></i></div>
+        <div class="ach-text-wrap">
+            <strong>Achievement Unlocked!</strong>
+            <span id="achText">Name</span>
+        </div>
+    </div>
+
+    <div id="prestigeShopModal" class="prestige-modal" style="display:none;">
+        <div class="prestige-modal-content">
+            <div class="prestige-modal-header">
+                <h2>Diamond Upgrades <span style="color:#a855f7; font-size:0.8rem;">(<i class="fas fa-gem"></i> <span id="dimStatModal">0</span>)</span></h2>
+                <button onclick="closePrestigeShop()" style="background:none;border:none;color:white;font-size:1.5rem;cursor:pointer;">x</button>
+            </div>
+            <div id="prestigeShopGrid" class="prestige-shop-grid"></div>
+        </div>
+    </div>
+
+    <div id="prestigeBtn" class="prestige-btn" onclick="togglePrestigeShop()">
+        <i class="fas fa-gem"></i> PRESTIGE
+        <div class="prestige-info">
+            Gain: <span id="prestigeGain">0</span> Diamonds
+        </div>
+    </div>
+
+<div class="game-wrapper">
+    
+    <header class="top-hud">
+        <div class="hud-item">
+            <i class="fas fa-mouse-pointer"></i> 
+            <span id="perClickStat">1</span> / click
+        </div>
+        <div class="hud-item">
+            <i class="fas fa-bolt"></i> 
+            <span id="perSecStat">0</span> / sec
+        </div>
+        <div class="hud-item diamond-hud" style="border-color: rgba(138, 43, 226, 0.5); color: #a855f7;">
+            <i class="fas fa-gem"></i> 
+            <span id="dimStat">0</span>
+        </div>
+    </header>
+
+    <div class="click-area" id="clickArea">
+        <div class="btn-glow"></div>
+        <button id="clickBtn">0</button>
+    </div>
+
+    <div class="shop-container">
+        <div class="shop-section">
+            <h2 class="section-title"><i class="fas fa-city"></i> Buildings</h2>
+            <div class="upgrade-grid" id="buildingsContainer"></div>
+        </div>
+
+        <div class="shop-section">
+            <h2 class="section-title"><i class="fas fa-flask"></i> Upgrades</h2>
+            <div class="upgrade-grid pills-grid" id="upgradesContainer"></div>
+        </div>
+    </div>
+
+</div>
+
+<div class="news-bar">
+    <div id="newsText" class="news-text">Loading news...</div>
+</div>
+
+<script src="scrpit.js"></script>
+</body>
+</html>
