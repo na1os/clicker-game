@@ -1,6 +1,6 @@
 # clicker-game
 
-Clicker Game Pro
+Clicker Game
 A slightly excessive incremental/idle game made with vanilla JS.
 
 I wanted to practice some CSS animations and vanilla JavaScript logic, so I started making a simple Cookie Clicker clone. It kind of got out of hand.
