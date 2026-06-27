@@ -500,7 +500,8 @@ function showAch(name) {
 function save() {
     var data = {
         s: score, ts: TotalScore, tc: totalclicks, bc: baseClick, b: JSON.stringify(buildings), 
-        u: JSON.stringify(ups), a: JSON.stringify(achs), d: dim, pu: JSON.stringify(prestigeUps)
+        u: JSON.stringify(ups), a: JSON.stringify(achs), d: dim, pu: JSON.stringify(prestigeUps),
+        t: Date.now() // saving current time for offline progress
     }
     localStorage.setItem("save3", JSON.stringify(data))
 }
@@ -520,18 +521,36 @@ function load() {
             dim = p.d || 0
             prestigeUps = p.pu ? JSON.parse(p.pu) : []
             calcPermStats()
+            domath()
+            
+            var lastTime = p.t || Date.now()
+            var now = Date.now()
+            var diff = (now - lastTime) / 1000
+            
+            if(diff > 5 && perSec > 0) { 
+                var offlineGain = perSec * diff
+                score += offlineGain
+                TotalScore += offlineGain
+                var mins = Math.floor(diff / 60)
+                var secs = Math.floor(diff % 60)
+                var timeStr = ""
+                if(mins > 0) timeStr += mins + "m "
+                timeStr += secs + "s"
+                alert("Welcome back! While you were away for " + timeStr + ", your buildings generated " + fmtNum(offlineGain) + " points!")
+            }
         } catch(e) {}
     }
 }
 
 window.onload = function() {
     load()
-    domath()
     renderb()
     renderu()
     upd()
     startNews()
     schedGold()
+
+    setInterval(save, 500)
 
     var lastTime = performance.now()
     function gameLoop(time) {
