@@ -9,7 +9,8 @@ There's no frameworks, no Node.js, no build steps. Just raw HTML, CSS, and JS.
 
 (If you're wondering why the JS file is called scrpit.js, yes, that was a typo on my end. I never bothered renaming it and now it's a feature).
 
-Game Preview(Put a screenshot of your game here by replacing the link above)
+Game Preview https://demo.nanos.ro/clicker-game/ 
+
 
 Features
 15 Buildings: Ranging from basic Cursors to the "Omnipotence" simulator.
