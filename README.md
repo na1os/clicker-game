@@ -9,7 +9,7 @@ There's no frameworks, no Node.js, no build steps. Just raw HTML, CSS, and JS.
 
 (If you're wondering why the JS file is called scrpit.js, yes, that was a typo on my end. I never bothered renaming it and now it's a feature).
 
-Game Preview https://demo.nanos.ro/clicker-game/ 
+Game Preview https://demo.nanos.ro/game/ 
 
 
 Features
