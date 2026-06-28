@@ -1,43 +1,38 @@
-// scrpit.js - English version with Auto-buyer, export/import, upload, reset, and playtime stats
+let score = 0;
+let totalScore = 0;
+let totalClicks = 0;
+let baseClickPower = 1;
+let pointsPerSecond = 0;
+let ownedBuildings = {};
+let purchasedUpgrades = [];
+let unlockedAchievements = [];
+let clickMultiplier = 1;
+let globalMultiplier = 1;
+let buildingMultipliers = {};
+let isFrenzyActive = false;
+let frenzyTimeout = null;
 
-// State
-var score = 0;
-var TotalScore = 0;
-var totalclicks = 0;
-var baseClick = 1;
-var perSec = 0;
-var buildings = {};
-var ups = [];
-var achs = [];
-var clickMult = 1;
-var globalMult = 1;
-var bMults = {};
-var isFrenzy = false;
-var frenzyT = null;
+let diamonds = 0;
+let diamondMultiplier = 1;
+let permanentClickBonus = 0;
+let permanentGlobalBonus = 0;
+let startingPointsBonus = 0;
+let purchasedPrestigeUpgrades = [];
+let isPrestigeShopOpen = false;
 
-var dim = 0;
-var dimMult = 1;
-var permClickBonus = 0;
-var permGlobalBonus = 0;
-var startBonus = 0;
-var prestigeUps = [];
-var prestigeShopOpen = false;
+let sessionStartTime = Date.now();
+let playtimeTimer = null;
 
-// Session stats
-var sessionStartTs = Date.now();
-var playtimeTimer = null;
-
-// Data (same as before)
-var pudata = [
-  {id:"p_click1", name:"Iron Fingers", desc:"+1 click power permanently", icon:"fa-hand-pointer", cost:3, type:"click", val:1},
-  {id:"p_click2", name:"Steel Fingers", desc:"+5 click power permanently", icon:"fa-hand-fist", cost:15, type:"click", val:5},
-  {id:"p_glob1", name:"Time Dilation", desc:"+10% to all production permanently", icon:"fa-clock", cost:5, type:"global", val:0.1},
-  {id:"p_glob2", name:"Space Warping", desc:"+25% to all production permanently", icon:"fa-rocket", cost:20, type:"global", val:0.25},
-  {id:"p_glob3", name:"Reality Bending", desc:"+50% to all production permanently", icon:"fa-atom", cost:50, type:"global", val:0.5},
-  {id:"p_start", name:"Head Start", desc:"Start with 1000 points after prestige", icon:"fa-play", cost:2, type:"start", val:1000}
+const prestigeUpgradesData = [
+  { id: "p_click1", name: "Iron Fingers", desc: "+1 click power permanently", icon: "fa-hand-pointer", cost: 3, type: "click", val: 1 },
+  { id: "p_click2", name: "Steel Fingers", desc: "+5 click power permanently", icon: "fa-hand-fist", cost: 15, type: "click", val: 5 },
+  { id: "p_glob1", name: "Time Dilation", desc: "+10% to all production permanently", icon: "fa-clock", cost: 5, type: "global", val: 0.1 },
+  { id: "p_glob2", name: "Space Warping", desc: "+25% to all production permanently", icon: "fa-rocket", cost: 20, type: "global", val: 0.25 },
+  { id: "p_glob3", name: "Reality Bending", desc: "+50% to all production permanently", icon: "fa-atom", cost: 50, type: "global", val: 0.5 },
+  { id: "p_start", name: "Head Start", desc: "Start with 1000 points after prestige", icon: "fa-play", cost: 2, type: "start", val: 1000 }
 ];
 
-var bdata = [
+const buildingsData = [
   { id: "cursor", name: "Cursor", desc: "Autoclicks once every 10 seconds.", icon: "fa-hand-pointer", baseCost: 15, costMult: 1.15, baseCps: 0.1, unlockReq: 0 },
   { id: "robot", name: "Robot", desc: "A simple bot doing the clicking for you.", icon: "fa-robot", baseCost: 100, costMult: 1.15, baseCps: 1, unlockReq: 10 },
   { id: "factory", name: "Factory", desc: "Produces points on an assembly line.", icon: "fa-industry", baseCost: 1100, costMult: 1.15, baseCps: 8, unlockReq: 10 },
@@ -55,7 +50,7 @@ var bdata = [
   { id: "omnipotence", name: "Omnipotence", desc: "You are God. Points are just a concept to you now.", icon: "fa-infinity", baseCost: 100000000000000000, costMult: 1.15, baseCps: 25000000000, unlockReq: 50 }
 ];
 
-var udata = [
+const upgradesData = [
   { id: "click1", name: "Reinforced Index", desc: "Clicking is twice as efficient.", icon: "fa-hand-fist", cost: 100, type: "click_mult", power: 2, req: { type: "clicks", amount: 0 } },
   { id: "click2", name: "Carpal Tunnel", desc: "Clicking is twice as efficient.", icon: "fa-hand-sparkles", cost: 500, type: "click_mult", power: 2, req: { type: "clicks", amount: 50 } },
   { id: "click3", name: "Ambidextrous", desc: "Clicking is twice as efficient.", icon: "fa-hands", cost: 10000, type: "click_mult", power: 2, req: { type: "clicks", amount: 200 } },
@@ -78,7 +73,7 @@ var udata = [
   { id: "glob4", name: "The Fourth Wall Break", desc: "All buildings are +100% efficient. The dev is proud.", icon: "fa-tv", cost: 1000000000000, type: "global_mult", power: 2, req: { type: "score", amount: 1000000000000 } }
 ];
 
-var adata = [
+const achievementsData = [
   { id: "ach_click1", name: "Baby Steps", desc: "Click the big button once. You did it!", icon: "fa-baby", req: { type: "total_clicks", amount: 1 } },
   { id: "ach_click100", name: "Clickspam", desc: "Click 100 times.", icon: "fa-computer-mouse", req: { type: "total_clicks", amount: 100 } },
   { id: "ach_click1k", name: "Autoclicker Suspect", desc: "Click 1,000 times.", icon: "fa-tachograph-digital", req: { type: "total_clicks", amount: 1000 } },
@@ -96,7 +91,7 @@ var adata = [
   { id: "ach_omni1", name: "I Am Inevitable", desc: "Buy the Omnipotence simulator.", icon: "fa-hand-sparkles", req: { type: "specific_building", id: "omnipotence", amount: 1 } }
 ];
 
-var news = [
+const newsFeed = [
   "News: Point prices drop following unexpected surge in clicking!",
   "Breaking: Local man spends 8 hours a day clicking a button.",
   "Report: Robots confirmed to feel nothing when generating points.",
@@ -123,599 +118,835 @@ var news = [
   "Error 404: Sleep not found. Must click."
 ];
 
-// Utilities
-function fmtNum(n) {
-  if (n < 1000) return Math.floor(n);
-  if (n < 1000000) return (n / 1000).toFixed(1) + "K";
-  if (n < 1000000000) return (n / 1000000).toFixed(1) + "M";
-  if (n < 1000000000000) return (n / 1000000000).toFixed(1) + "B";
-  if (n < 1000000000000000) return (n / 1000000000000000).toFixed(1) + "T";
-  if (n < 1000000000000000000) return (n / 1000000000000000000).toFixed(1) + "Qa";
-  return (n / 1000000000000000000).toFixed(1) + "Qi";
+function formatNumber(num) {
+  if (num < 1000) return Math.floor(num);
+  if (num < 1000000) return (num / 1000).toFixed(1) + "K";
+  if (num < 1000000000) return (num / 1000000).toFixed(1) + "M";
+  if (num < 1000000000000) return (num / 1000000000).toFixed(1) + "B";
+  if (num < 1000000000000000) return (num / 1000000000000).toFixed(1) + "T";
+  if (num < 1000000000000000000) return (num / 1000000000000000).toFixed(1) + "Qa";
+  return (num / 1000000000000000000).toFixed(1) + "Qi";
 }
 
-function formatTimeSeconds(s) {
-  s = Math.max(0, Math.floor(s));
-  var h = Math.floor(s / 3600);
-  var m = Math.floor((s % 3600) / 60);
-  var sec = s % 60;
-  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+function formatTime(seconds) {
+  seconds = Math.max(0, Math.floor(seconds));
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  return [hrs, mins, secs].map(v => String(v).padStart(2, '0')).join(':');
 }
 
-function getPow() {
-  return baseClick * clickMult * dimMult * (isFrenzy ? 777 : 1);
+function getClickPower() {
+  return baseClickPower * clickMultiplier * diamondMultiplier * (isFrenzyActive ? 777 : 1);
 }
 
-// Calculations
-function domath() {
-  clickMult = 1;
-  globalMult = 1;
-  bMults = {};
-  for (var i = 0; i < ups.length; i++) {
-    var uid = ups[i];
-    var u = udata.find(function(x) { return x.id === uid; });
-    if (!u) continue;
-    if (u.type === 'click_mult') clickMult *= u.power;
-    if (u.type === 'g_mult' || u.type === 'global_mult') globalMult *= u.power;
-    if (u.type === 'building_mult' || u.type === 'b_mult') {
-      if (!bMults[u.target]) bMults[u.target] = 1;
-      bMults[u.target] *= u.power;
+function updateGameMultipliers() {
+  clickMultiplier = 1;
+  globalMultiplier = 1;
+  buildingMultipliers = {};
+
+  for (let i = 0; i < purchasedUpgrades.length; i++) {
+    const upgradeId = purchasedUpgrades[i];
+    const upgrade = upgradesData.find(u => u.id === upgradeId);
+    if (!upgrade) continue;
+
+    if (upgrade.type === 'click_mult') {
+      clickMultiplier *= upgrade.power;
+    }
+    if (upgrade.type === 'g_mult' || upgrade.type === 'global_mult') {
+      globalMultiplier *= upgrade.power;
+    }
+    if (upgrade.type === 'building_mult' || upgrade.type === 'b_mult') {
+      if (!buildingMultipliers[upgrade.target]) {
+        buildingMultipliers[upgrade.target] = 1;
+      }
+      buildingMultipliers[upgrade.target] *= upgrade.power;
     }
   }
-  calcps();
+  calculatePointsPerSecond();
 }
 
-function calcps() {
-  var t = 0;
-  for (var i = 0; i < bdata.length; i++) {
-    var b = bdata[i];
-    var o = buildings[b.id] || 0;
-    if (o === 0) continue;
-    var syn = Math.floor(o / 10) + 1;
-    var sm = bMults[b.id] || 1;
-    t += b.baseCps * o * syn * sm * globalMult * dimMult;
+function calculatePointsPerSecond() {
+  let totalCps = 0;
+  for (let i = 0; i < buildingsData.length; i++) {
+    const building = buildingsData[i];
+    const amountOwned = ownedBuildings[building.id] || 0;
+    if (amountOwned === 0) continue;
+
+    const synergyMultiplier = Math.floor(amountOwned / 10) + 1;
+    const specificMultiplier = buildingMultipliers[building.id] || 1;
+    totalCps += building.baseCps * amountOwned * synergyMultiplier * specificMultiplier * globalMultiplier * diamondMultiplier;
   }
-  perSec = t;
+  pointsPerSecond = totalCps;
 }
 
-function getc(bc, bm, o) {
-  return Math.floor(bc * Math.pow(bm, o));
+function calculateBuildingCost(baseCost, multiplier, count) {
+  return Math.floor(baseCost * Math.pow(multiplier, count));
 }
 
-// UI update
-function upd() {
-  var perClickEl = document.getElementById('perClickStat');
-  var perSecEl = document.getElementById('perSecStat');
-  var clickBtn = document.getElementById('clickBtn');
-  var dimEl = document.getElementById('dimStat');
-  var dimModal = document.getElementById('dimStatModal');
-  var totalBuildingsEl = document.getElementById('totalBuildingsStat');
+function updateUI() {
+  const perClickEl = document.getElementById('perClickStat');
+  const perSecEl = document.getElementById('perSecStat');
+  const clickBtn = document.getElementById('clickBtn');
+  const dimEl = document.getElementById('dimStat');
+  const dimModal = document.getElementById('dimStatModal');
+  const totalBuildingsEl = document.getElementById('totalBuildingsStat');
 
-  if (perClickEl) perClickEl.innerText = fmtNum(getPow());
-  if (perSecEl) perSecEl.innerText = fmtNum(perSec);
-  if (clickBtn) clickBtn.innerText = fmtNum(score);
-  if (dimEl) dimEl.innerText = dim;
-  if (dimModal) dimModal.innerText = dim;
+  if (perClickEl) perClickEl.innerText = formatNumber(getClickPower());
+  if (perSecEl) perSecEl.innerText = formatNumber(pointsPerSecond);
+  if (clickBtn) clickBtn.innerText = formatNumber(score);
+  if (dimEl) dimEl.innerText = diamonds;
+  if (dimModal) dimModal.innerText = diamonds;
+
   if (totalBuildingsEl) {
-    var tb = 0; for (var k in buildings) tb += buildings[k];
-    totalBuildingsEl.innerText = tb;
+    let count = 0;
+    for (const key in ownedBuildings) {
+      count += ownedBuildings[key];
+    }
+    totalBuildingsEl.innerText = count;
   }
 
-  for (var i = 0; i < bdata.length; i++) {
-    var b = bdata[i];
-    var o = buildings[b.id] || 0;
-    var costEl = document.getElementById('cost-b-' + b.id);
-    var ownedEl = document.getElementById('owned-b-' + b.id);
-    var btn = document.querySelector('.buy-btn[data-id="' + b.id + '"]');
-    if (costEl) costEl.innerText = fmtNum(getc(b.baseCost, b.costMult, o));
-    if (ownedEl) ownedEl.innerText = o;
-    if (btn) btn.disabled = score < getc(b.baseCost, b.costMult, o);
-    var syn = document.getElementById('syn-' + b.id);
-    if (syn) {
-      var nx = 10 - (o % 10);
-      if (nx !== 10 && o > 0) { syn.innerText = nx + " until x2 production"; syn.style.display = 'block'; }
-      else syn.style.display = 'none';
+  for (let i = 0; i < buildingsData.length; i++) {
+    const building = buildingsData[i];
+    const amountOwned = ownedBuildings[building.id] || 0;
+    const costElement = document.getElementById('cost-b-' + building.id);
+    const ownedElement = document.getElementById('owned-b-' + building.id);
+    const buyButton = document.querySelector('.buy-btn[data-id="' + building.id + '"]');
+    const currentCost = calculateBuildingCost(building.baseCost, building.costMult, amountOwned);
+
+    if (costElement) costElement.innerText = formatNumber(currentCost);
+    if (ownedElement) ownedElement.innerText = amountOwned;
+    if (buyButton) buyButton.disabled = score < currentCost;
+
+    const synergyElement = document.getElementById('syn-' + building.id);
+    if (synergyElement) {
+      const nextMilestone = 10 - (amountOwned % 10);
+      if (nextMilestone !== 10 && amountOwned > 0) {
+        synergyElement.innerText = `${nextMilestone} until x2 production`;
+        synergyElement.style.display = 'block';
+      } else {
+        synergyElement.style.display = 'none';
+      }
     }
   }
-  updPrestige();
+  updatePrestigeUI();
 }
 
-// Unlock check
-function isUnlocked(i) {
-  if (i === 0) return true;
-  var prev = bdata[i - 1];
-  return (buildings[prev.id] || 0) >= prev.unlockReq;
+function isBuildingUnlocked(index) {
+  if (index === 0) return true;
+  const previousBuilding = buildingsData[index - 1];
+  return (ownedBuildings[previousBuilding.id] || 0) >= previousBuilding.unlockReq;
 }
 
-// Render buildings and attach handlers
-function renderb() {
-  var c = document.getElementById('buildingsContainer');
-  if (!c) return;
-  c.innerHTML = '';
-  for (var i = 0; i < bdata.length; i++) {
-    if (!isUnlocked(i)) continue;
-    var b = bdata[i];
-    var o = buildings[b.id] || 0;
-    var cost = getc(b.baseCost, b.costMult, o);
-    var title = b.name + ': ' + b.desc;
-    c.innerHTML +=
-      '<div class="box" id="box-' + b.id + '" title="' + title + '">' +
-        '<div class="box-info">' +
-          '<div class="box-icon"><i class="fas ' + b.icon + '"></i></div>' +
-          '<div class="box-details"><h3>' + b.name + '</h3><p>' + b.desc + '</p><div class="synergy" id="syn-' + b.id + '" style="display:none;"></div></div>' +
-        '</div>' +
-        '<div class="box-actions">' +
-          '<span class="cost" id="cost-b-' + b.id + '">' + fmtNum(cost) + '</span>' +
-          '<button class="buy-btn" data-id="' + b.id + '" data-index="' + i + '">Buy</button>' +
-          '<span class="owned-badge" id="owned-b-' + b.id + '">' + o + '</span>' +
-        '</div>' +
-      '</div>';
+function renderBuildings() {
+  const container = document.getElementById('buildingsContainer');
+  if (!container) return;
+  container.innerHTML = '';
+
+  for (let i = 0; i < buildingsData.length; i++) {
+    if (!isBuildingUnlocked(i)) continue;
+    const building = buildingsData[i];
+    const amountOwned = ownedBuildings[building.id] || 0;
+    const cost = calculateBuildingCost(building.baseCost, building.costMult, amountOwned);
+    const hoverTitle = `${building.name}: ${building.desc}`;
+
+    container.innerHTML += `
+      <div class="box" id="box-${building.id}" title="${hoverTitle}">
+        <div class="box-info">
+          <div class="box-icon"><i class="fas ${building.icon}"></i></div>
+          <div class="box-details">
+            <h3>${building.name}</h3>
+            <p>${building.desc}</p>
+            <div class="synergy" id="syn-${building.id}" style="display:none;"></div>
+          </div>
+        </div>
+        <div class="box-actions">
+          <span class="cost" id="cost-b-${building.id}">${formatNumber(cost)}</span>
+          <button class="buy-btn" data-id="${building.id}" data-index="${i}">Buy</button>
+          <span class="owned-badge" id="owned-b-${building.id}">${amountOwned}</span>
+        </div>
+      </div>`;
   }
 
-  // attach handlers for buy buttons
-  var buyBtns = c.querySelectorAll('.buy-btn');
-  buyBtns.forEach(function(btn) {
+  container.querySelectorAll('.buy-btn').forEach(btn => {
     if (btn._handler) btn.removeEventListener('pointerdown', btn._handler);
-    var handler = function(e) {
+    const clickHandler = (e) => {
       e.preventDefault();
-      var id = btn.dataset.id;
-      var idx = parseInt(btn.dataset.index, 10);
+      const id = btn.dataset.id;
+      const index = parseInt(btn.dataset.index, 10);
       if (e.shiftKey) {
-        buyMax(id, idx);
+        buyMaxBuildings(id, index);
       } else if (e.ctrlKey || e.metaKey) {
-        buyMany(id, idx, 10);
+        buyMultipleBuildings(id, index, 10);
       } else {
-        buyb(id, idx, 1);
+        buyBuilding(id, index, 1);
       }
     };
-    btn._handler = handler;
-    btn.addEventListener('pointerdown', handler);
+    btn._handler = clickHandler;
+    btn.addEventListener('pointerdown', clickHandler);
   });
 }
 
-// Buy functions
-function buyb(id, i, count) {
+function buyBuilding(id, index, count) {
   count = Math.max(1, Math.floor(count || 1));
-  var bd = bdata[i];
-  var owned = buildings[id] || 0;
-  for (var k = 0; k < count; k++) {
-    var cost = getc(bd.baseCost, bd.costMult, owned);
-    if (score >= cost) {
-      score -= cost;
-      owned++;
-      buildings[id] = owned;
-    } else break;
-  }
-  domath();
-  upd();
-  save();
-  checkachs();
-  if (i + 1 < bdata.length) {
-    if (!document.getElementById('box-' + bdata[i + 1].id) && isUnlocked(i + 1)) renderb();
-  }
-}
+  const building = buildingsData[index];
+  let amountOwned = ownedBuildings[id] || 0;
 
-function buyMany(id, i, count) {
-  buyb(id, i, count);
-}
-
-function buyMax(id, i) {
-  var bd = bdata[i];
-  var owned = buildings[id] || 0;
-  var bought = 0;
-  var safety = 1000000;
-  while (safety-- > 0) {
-    var cost = getc(bd.baseCost, bd.costMult, owned);
-    if (score >= cost) {
-      score -= cost;
-      owned++;
-      bought++;
-      buildings[id] = owned;
-    } else break;
+  for (let k = 0; k < count; k++) {
+    const currentCost = calculateBuildingCost(building.baseCost, building.costMult, amountOwned);
+    if (score >= currentCost) {
+      score -= currentCost;
+      amountOwned++;
+      ownedBuildings[id] = amountOwned;
+    } else {
+      break;
+    }
   }
-  if (bought > 0) {
-    domath();
-    upd();
-    save();
-    checkachs();
-    if (i + 1 < bdata.length) {
-      if (!document.getElementById('box-' + bdata[i + 1].id) && isUnlocked(i + 1)) renderb();
+
+  updateGameMultipliers();
+  updateUI();
+  saveGame();
+  checkAchievements();
+
+  if (index + 1 < buildingsData.length) {
+    if (!document.getElementById('box-' + buildingsData[index + 1].id) && isBuildingUnlocked(index + 1)) {
+      renderBuildings();
     }
   }
 }
 
-// Upgrades
-function isUpUnlocked(u) {
-  if (ups.indexOf(u.id) !== -1) return false;
-  if (!u.req) return true;
-  if (u.req.type == 'clicks') return totalclicks >= u.req.amount;
-  if (u.req.type == 'score') return TotalScore >= u.req.amount;
-  if (u.req.type == 'building') return (buildings[u.req.id] || 0) >= u.req.amount;
+function buyMultipleBuildings(id, index, count) {
+  buyBuilding(id, index, count);
+}
+
+function buyMaxBuildings(id, index) {
+  const building = buildingsData[index];
+  let amountOwned = ownedBuildings[id] || 0;
+  let buildingsBought = 0;
+  let safetyLoopBreaker = 1000000;
+
+  while (safetyLoopBreaker-- > 0) {
+    const currentCost = calculateBuildingCost(building.baseCost, building.costMult, amountOwned);
+    if (score >= currentCost) {
+      score -= currentCost;
+      amountOwned++;
+      buildingsBought++;
+      ownedBuildings[id] = amountOwned;
+    } else {
+      break;
+    }
+  }
+
+  if (buildingsBought > 0) {
+    updateGameMultipliers();
+    updateUI();
+    saveGame();
+    checkAchievements();
+    if (index + 1 < buildingsData.length) {
+      if (!document.getElementById('box-' + buildingsData[index + 1].id) && isBuildingUnlocked(index + 1)) {
+        renderBuildings();
+      }
+    }
+  }
+}
+
+function isUpgradeUnlocked(upgrade) {
+  if (purchasedUpgrades.indexOf(upgrade.id) !== -1) return false;
+  if (!upgrade.req) return true;
+  if (upgrade.req.type === 'clicks') return totalClicks >= upgrade.req.amount;
+  if (upgrade.req.type === 'score') return totalScore >= upgrade.req.amount;
+  if (upgrade.req.type === 'building') return (ownedBuildings[upgrade.req.id] || 0) >= upgrade.req.amount;
   return false;
 }
 
-function renderu() {
-  var c = document.getElementById('upgradesContainer');
-  if (!c) return;
-  c.innerHTML = '';
-  for (var i = 0; i < udata.length; i++) {
-    var u = udata[i];
-    var un = isUpUnlocked(u);
-    var bo = ups.indexOf(u.id) !== -1;
-    var cls = 'upgrade-pill';
-    if (!un && !bo) cls += ' locked';
-    if (bo) cls += ' bought';
-    var onclick = (!bo && un) ? ' onclick="buyu(\'' + u.id + '\')"' : '';
-    c.innerHTML += '<div class="' + cls + '" title="' + u.name + ': ' + u.desc + '"' + onclick + '><i class="fas ' + u.icon + '"></i><span>' + (bo ? 'Bought' : fmtNum(u.cost)) + '</span></div>';
+function renderUpgrades() {
+  const container = document.getElementById('upgradesContainer');
+  if (!container) return;
+  container.innerHTML = '';
+
+  for (let i = 0; i < upgradesData.length; i++) {
+    const upgrade = upgradesData[i];
+    const isAvailable = isUpgradeUnlocked(upgrade);
+    const isBought = purchasedUpgrades.indexOf(upgrade.id) !== -1;
+    let elementClass = 'upgrade-pill';
+
+    if (!isAvailable && !isBought) elementClass += ' locked';
+    if (isBought) elementClass += ' bought';
+
+    const clickAction = (!isBought && isAvailable) ? ` onclick="buyUpgrade('${upgrade.id}')"` : '';
+    const displayedCost = isBought ? 'Bought' : formatNumber(upgrade.cost);
+
+    container.innerHTML += `
+      <div class="${elementClass}" title="${upgrade.name}: ${upgrade.desc}" ${clickAction}>
+        <i class="fas ${upgrade.icon}"></i>
+        <span>${displayedCost}</span>
+      </div>`;
   }
 }
 
-function buyu(id) {
-  var u = udata.find(function(x){ return x.id === id; });
-  if (!u) return;
-  if (ups.indexOf(id) !== -1) return;
-  if (score < u.cost) return;
-  score -= u.cost;
-  ups.push(id);
-  domath();
-  renderu();
-  upd();
-  save();
-  checkachs();
+function buyUpgrade(id) {
+  const upgrade = upgradesData.find(u => u.id === id);
+  if (!upgrade || purchasedUpgrades.indexOf(id) !== -1 || score < upgrade.cost) return;
+
+  score -= upgrade.cost;
+  purchasedUpgrades.push(id);
+  updateGameMultipliers();
+  renderUpgrades();
+  updateUI();
+  saveGame();
+  checkAchievements();
 }
 
-// Prestige
-function getPrestigeGain() { if (score < 1000000) return 0; return Math.floor(Math.sqrt(score / 1000000)); }
-function updPrestige() {
-  var btn = document.getElementById('prestigeBtn');
-  var gain = getPrestigeGain();
-  if (btn) {
-    if (gain > 0) { btn.classList.add('unlocked'); var gEl = document.getElementById('prestigeGain'); if (gEl) gEl.innerText = gain; }
-    else btn.classList.remove('unlocked');
+function calculatePrestigeGain() {
+  if (score < 1000000) return 0;
+  return Math.floor(Math.sqrt(score / 1000000));
+}
+
+function updatePrestigeUI() {
+  const prestigeBtn = document.getElementById('prestigeBtn');
+  const possibleGain = calculatePrestigeGain();
+
+  if (prestigeBtn) {
+    if (possibleGain > 0) {
+      prestigeBtn.classList.add('unlocked');
+      const gainDisplay = document.getElementById('prestigeGain');
+      if (gainDisplay) gainDisplay.innerText = possibleGain;
+    } else {
+      prestigeBtn.classList.remove('unlocked');
+    }
   }
 }
-function calcPermStats() {
-  permClickBonus = 0; permGlobalBonus = 0; startBonus = 0;
-  for (var i = 0; i < prestigeUps.length; i++) {
-    var p = pudata.find(function(x){ return x.id === prestigeUps[i]; });
-    if (!p) continue;
-    if (p.type == 'click') permClickBonus += p.val;
-    if (p.type == 'global') permGlobalBonus += p.val;
-    if (p.type == 'start') startBonus += p.val;
+
+function calculatePermanentStats() {
+  permanentClickBonus = 0;
+  permanentGlobalBonus = 0;
+  startingPointsBonus = 0;
+
+  for (let i = 0; i < purchasedPrestigeUpgrades.length; i++) {
+    const upgrade = prestigeUpgradesData.find(p => p.id === purchasedPrestigeUpgrades[i]);
+    if (!upgrade) continue;
+    if (upgrade.type === 'click') permanentClickBonus += upgrade.val;
+    if (upgrade.type === 'global') permanentGlobalBonus += upgrade.val;
+    if (upgrade.type === 'start') startingPointsBonus += upgrade.val;
   }
-  baseClick = 1 + permClickBonus;
-  dimMult = 1 + permGlobalBonus;
+
+  baseClickPower = 1 + permanentClickBonus;
+  diamondMultiplier = 1 + permanentGlobalBonus;
 }
-function doPrestige() {
-  var gain = getPrestigeGain();
-  if (gain <= 0) return;
-  if (confirm('Are you sure? You will reset everything but gain ' + gain + ' Diamonds!')) {
-    dim += gain;
-    score = startBonus;
-    TotalScore = 0;
-    totalclicks = 0;
-    perSec = 0;
-    buildings = {};
-    ups = [];
-    clickMult = 1;
-    globalMult = 1;
-    bMults = {};
-    isFrenzy = false;
-    var cb = document.getElementById('clickBtn'); if (cb) cb.classList.remove('frenzy');
-    calcPermStats();
-    domath();
-    renderb();
-    renderu();
-    upd();
-    save();
-    checkachs();
+
+function triggerPrestige() {
+  const possibleGain = calculatePrestigeGain();
+  if (possibleGain <= 0) return;
+
+  if (confirm(`Are you sure? You will reset everything but gain ${possibleGain} Diamonds!`)) {
+    diamonds += possibleGain;
+    score = startingPointsBonus;
+    totalScore = 0;
+    totalClicks = 0;
+    pointsPerSecond = 0;
+    ownedBuildings = {};
+    purchasedUpgrades = [];
+    clickMultiplier = 1;
+    globalMultiplier = 1;
+    buildingMultipliers = {};
+    isFrenzyActive = false;
+
+    const clickButton = document.getElementById('clickBtn');
+    if (clickButton) clickButton.classList.remove('frenzy');
+
+    calculatePermanentStats();
+    updateGameMultipliers();
+    renderBuildings();
+    renderUpgrades();
+    updateUI();
+    saveGame();
+    checkAchievements();
     closePrestigeShop();
   }
 }
 
-// Prestige modal
 function togglePrestigeShop() {
-  var shop = document.getElementById('prestigeShopModal'); if (!shop) return;
-  if (prestigeShopOpen) { shop.style.display = 'none'; prestigeShopOpen = false; }
-  else { renderPrestigeShop(); shop.style.display = 'flex'; prestigeShopOpen = true; }
-}
-function closePrestigeShop() { var shop = document.getElementById('prestigeShopModal'); if (shop) shop.style.display = 'none'; prestigeShopOpen = false; }
-function renderPrestigeShop() {
-  var c = document.getElementById('prestigeShopGrid'); if (!c) return;
-  c.innerHTML = '';
-  for (var i = 0; i < pudata.length; i++) {
-    var p = pudata[i];
-    var bought = prestigeUps.indexOf(p.id) !== -1;
-    var canBuy = !bought && dim >= p.cost;
-    var cls = 'p-upgrade-box' + (bought ? ' bought' : (!canBuy ? ' locked' : ''));
-    var onclick = (!bought && canBuy) ? ' onclick="buyPrestigeUp(\'' + p.id + '\')"' : '';
-    c.innerHTML += '<div class="' + cls + '"' + onclick + '><i class="fas ' + p.icon + '"></i><div><strong>' + p.name + '</strong><br><small>' + p.desc + '</small></div><div class="p-cost"><i class="fas fa-gem"></i> ' + p.cost + '</div></div>';
+  const shopModal = document.getElementById('prestigeShopModal');
+  if (!shopModal) return;
+
+  if (isPrestigeShopOpen) {
+    shopModal.style.display = 'none';
+    isPrestigeShopOpen = false;
+  } else {
+    renderPrestigeShop();
+    shopModal.style.display = 'flex';
+    isPrestigeShopOpen = true;
   }
 }
-function buyPrestigeUp(id) { var p = pudata.find(function(x){ return x.id === id; }); if (!p) return; if (prestigeUps.indexOf(id) !== -1) return; if (dim < p.cost) return; dim -= p.cost; prestigeUps.push(id); calcPermStats(); domath(); renderPrestigeShop(); upd(); save(); }
 
-// Golden cookie tuned
-var goldenMinDelay = 60000;
-var goldenMaxDelay = 180000;
-var goldenSessionRespawns = 3;
-var goldenActiveDuration = 7000;
-var goldenRespawnsLeft = 0;
-var goldenActiveTimer = null;
-var goldenSessionActive = false;
-var goldenSchedTimer = null;
-
-function randBetween(min, max) { return Math.random() * (max - min) + min; }
-function placeGoldenAtRandom() {
-  var gc = document.getElementById('goldenCookie'); if (!gc) return;
-  gc.style.right = 'auto';
-  gc.style.left = (Math.random() * 78 + 8) + '%';
-  gc.style.top = (Math.random() * 68 + 6) + '%';
+function closePrestigeShop() {
+  const shopModal = document.getElementById('prestigeShopModal');
+  if (shopModal) shopModal.style.display = 'none';
+  isPrestigeShopOpen = false;
 }
-function showGolden() {
-  var gc = document.getElementById('goldenCookie'); if (!gc) return;
-  placeGoldenAtRandom();
-  gc.style.display = 'flex';
-  setTimeout(function(){ gc.classList.add('active'); }, 20);
+
+function renderPrestigeShop() {
+  const container = document.getElementById('prestigeShopGrid');
+  if (!container) return;
+  container.innerHTML = '';
+
+  for (let i = 0; i < prestigeUpgradesData.length; i++) {
+    const upgrade = prestigeUpgradesData[i];
+    const isBought = purchasedPrestigeUpgrades.indexOf(upgrade.id) !== -1;
+    const canAfford = !isBought && diamonds >= upgrade.cost;
+    let boxClass = 'p-upgrade-box';
+
+    if (isBought) boxClass += ' bought';
+    else if (!canAfford) boxClass += ' locked';
+
+    const clickAction = (!isBought && canAfford) ? ` onclick="buyPrestigeUpgrade('${upgrade.id}')"` : '';
+
+    container.innerHTML += `
+      <div class="${boxClass}" ${clickAction}>
+        <i class="fas ${upgrade.icon}"></i>
+        <div>
+          <strong>${upgrade.name}</strong><br>
+          <small>${upgrade.desc}</small>
+        </div>
+        <div class="p-cost"><i class="fas fa-gem"></i> ${upgrade.cost}</div>
+      </div>`;
+  }
+}
+
+function buyPrestigeUpgrade(id) {
+  const upgrade = prestigeUpgradesData.find(p => p.id === id);
+  if (!upgrade || purchasedPrestigeUpgrades.indexOf(id) !== -1 || diamonds < upgrade.cost) return;
+
+  diamonds -= upgrade.cost;
+  purchasedPrestigeUpgrades.push(id);
+  calculatePermanentStats();
+  updateGameMultipliers();
+  renderPrestigeShop();
+  updateUI();
+  saveGame();
+}
+
+const goldenMinDelay = 60000;
+const goldenMaxDelay = 180000;
+const goldenSessionRespawns = 3;
+const goldenActiveDuration = 7000;
+let goldenRespawnsLeft = 0;
+let goldenActiveTimer = null;
+let goldenSessionActive = false;
+let goldenSchedTimer = null;
+
+function generateRandomNumber(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+function repositionGoldenCookie() {
+  const goldenCookie = document.getElementById('goldenCookie');
+  if (!goldenCookie) return;
+  goldenCookie.style.right = 'auto';
+  goldenCookie.style.left = (Math.random() * 78 + 8) + '%';
+  goldenCookie.style.top = (Math.random() * 68 + 6) + '%';
+}
+
+function displayGoldenCookie() {
+  const goldenCookie = document.getElementById('goldenCookie');
+  if (!goldenCookie) return;
+
+  repositionGoldenCookie();
+  goldenCookie.style.display = 'flex';
+  setTimeout(() => { goldenCookie.classList.add('active'); }, 20);
   goldenSessionActive = true;
-  if (goldenActiveTimer) clearTimeout(goldenActiveTimer);
-  goldenActiveTimer = setTimeout(onGoldenTimeout, goldenActiveDuration);
-}
-function hideGolden() {
-  var gc = document.getElementById('goldenCookie'); if (!gc) return;
-  gc.classList.remove('active');
-  setTimeout(function(){ gc.style.display = 'none'; }, 160);
-  goldenSessionActive = false;
-  if (goldenActiveTimer) { clearTimeout(goldenActiveTimer); goldenActiveTimer = null; }
-}
-function relocateGoldenInstant() {
-  var gc = document.getElementById('goldenCookie'); if (!gc) return;
-  placeGoldenAtRandom();
-  if (goldenActiveTimer) clearTimeout(goldenActiveTimer);
-  goldenActiveTimer = setTimeout(onGoldenTimeout, goldenActiveDuration);
-}
-function onGoldenTimeout() {
-  if (goldenRespawnsLeft > 0) { goldenRespawnsLeft--; relocateGoldenInstant(); return; }
-  hideGolden();
-  schedGold();
-}
-function startGoldenSession() { goldenRespawnsLeft = goldenSessionRespawns; showGolden(); }
-function schedGold() { if (goldenSchedTimer) clearTimeout(goldenSchedTimer); var delay = randBetween(goldenMinDelay, goldenMaxDelay); goldenSchedTimer = setTimeout(startGoldenSession, delay); }
 
-function wireGoldenHandler() {
-  var gc = document.getElementById('goldenCookie'); if (!gc) return;
-  if (gc._goldenHandlerAttached) return;
-  gc._goldenHandlerAttached = true;
-  gc.addEventListener('pointerdown', function(e){
+  if (goldenActiveTimer) clearTimeout(goldenActiveTimer);
+  goldenActiveTimer = setTimeout(handleGoldenCookieTimeout, goldenActiveDuration);
+}
+
+function hideGoldenCookie() {
+  const goldenCookie = document.getElementById('goldenCookie');
+  if (!goldenCookie) return;
+
+  goldenCookie.classList.remove('active');
+  setTimeout(() => { goldenCookie.style.display = 'none'; }, 160);
+  goldenSessionActive = false;
+
+  if (goldenActiveTimer) {
+    clearTimeout(goldenActiveTimer);
+    goldenActiveTimer = null;
+  }
+}
+
+function relocateGoldenInstant() {
+  const goldenCookie = document.getElementById('goldenCookie');
+  if (!goldenCookie) return;
+
+  repositionGoldenCookie();
+  if (goldenActiveTimer) clearTimeout(goldenActiveTimer);
+  goldenActiveTimer = setTimeout(handleGoldenCookieTimeout, goldenActiveDuration);
+}
+
+function handleGoldenCookieTimeout() {
+  if (goldenRespawnsLeft > 0) {
+    goldenRespawnsLeft--;
+    relocateGoldenInstant();
+    return;
+  }
+  hideGoldenCookie();
+  scheduleGoldenCookie();
+}
+
+function startGoldenCookieSession() {
+  goldenRespawnsLeft = goldenSessionRespawns;
+  displayGoldenCookie();
+}
+
+function scheduleGoldenCookie() {
+  if (goldenSchedTimer) clearTimeout(goldenSchedTimer);
+  const nextDelay = generateRandomNumber(goldenMinDelay, goldenMaxDelay);
+  goldenSchedTimer = setTimeout(startGoldenCookieSession, nextDelay);
+}
+
+function attachGoldenCookieHandler() {
+  const goldenCookie = document.getElementById('goldenCookie');
+  if (!goldenCookie || goldenCookie._goldenHandlerAttached) return;
+
+  goldenCookie._goldenHandlerAttached = true;
+  goldenCookie.addEventListener('pointerdown', (e) => {
     if (!goldenSessionActive) return;
     e.preventDefault();
+
     if (Math.random() < 0.5) {
-      isFrenzy = true;
-      var cb = document.getElementById('clickBtn'); if (cb) cb.classList.add('frenzy');
-      upd();
-      if (frenzyT) clearTimeout(frenzyT);
-      frenzyT = setTimeout(function(){ isFrenzy = false; var cb2 = document.getElementById('clickBtn'); if (cb2) cb2.classList.remove('frenzy'); upd(); }, 10000);
-      showFloat("FRENZY x777!", true);
+      isFrenzyActive = true;
+      const clickButton = document.getElementById('clickBtn');
+      if (clickButton) clickButton.classList.add('frenzy');
+      updateUI();
+
+      if (frenzyTimeout) clearTimeout(frenzyTimeout);
+      frenzyTimeout = setTimeout(() => {
+        isFrenzyActive = false;
+        const btn = document.getElementById('clickBtn');
+        if (btn) btn.classList.remove('frenzy');
+        updateUI();
+      }, 10000);
+
+      createFloatingText("FRENZY x777!", true);
     } else {
-      var bonus = Math.max(TotalScore * 0.1, 100);
-      score += bonus; TotalScore += bonus; upd(); showFloat("+" + fmtNum(bonus) + " Lucky!", true);
+      const luckyBonus = Math.max(totalScore * 0.1, 100);
+      score += luckyBonus;
+      totalScore += luckyBonus;
+      updateUI();
+      createFloatingText(`+${formatNumber(luckyBonus)} Lucky!`, true);
     }
-    save();
+
+    saveGame();
     relocateGoldenInstant();
   });
 }
 
-function initGolden() {
-  var gc = document.getElementById('goldenCookie'); if (!gc) return;
-  gc.style.display = 'none';
-  gc.classList.remove('active');
-  wireGoldenHandler();
-  if (!goldenSchedTimer) schedGold();
+function initializeGoldenCookie() {
+  const goldenCookie = document.getElementById('goldenCookie');
+  if (!goldenCookie) return;
+
+  goldenCookie.style.display = 'none';
+  goldenCookie.classList.remove('active');
+  attachGoldenCookieHandler();
+
+  if (!goldenSchedTimer) scheduleGoldenCookie();
 }
 
-// Floating text
-function showFloat(txt, gold) {
-  var f = document.createElement('div'); f.className = 'floating-text' + (gold ? ' gold' : ''); f.innerText = txt;
-  var area = document.getElementById('clickArea');
-  if (area) {
-    f.style.left = (Math.random() * 100 + 20) + 'px';
-    f.style.top = (Math.random() * 40 + 40) + 'px';
-    area.appendChild(f);
-    setTimeout(function(){ f.remove(); }, 1000);
-  } else setTimeout(function(){ f.remove(); }, 1000);
-}
+function createFloatingText(text, isGolden) {
+  const textElement = document.createElement('div');
+  textElement.className = 'floating-text' + (isGolden ? ' gold' : '');
+  textElement.innerText = text;
 
-// Welcome modal
-function showWelcomeModal(){ var w = document.getElementById('welcomeModal'); if(!w) return; w.style.display = 'flex'; }
-function closeWelcomeModal(setSeen){ var w = document.getElementById('welcomeModal'); if(!w) return; w.style.display = 'none'; if(setSeen){ try{ localStorage.setItem('seenWelcome','1'); }catch(e){} } }
-function showWelcomeIfNeeded(){ try{ var seen = localStorage.getItem('seenWelcome'); if(!seen) showWelcomeModal(); }catch(e){} }
-
-// News
-function startNews(){
-  var t = document.getElementById('newsText');
-  var n = news[Math.floor(Math.random()*news.length)];
-  if (t) t.innerText = n + "     +++     " + n + "     +++     ";
-  setInterval(function(){ var n2 = news[Math.floor(Math.random()*news.length)]; if (t) t.innerText = n2 + "     +++     " + n2 + "     +++     "; }, 30000);
-}
-
-// Achievements
-function checkachs(){
-  var tb = 0; for (var k in buildings) tb += buildings[k];
-  for (var i = 0; i < adata.length; i++) {
-    var a = adata[i];
-    if (achs.indexOf(a.id) !== -1) continue;
-    var ok = false;
-    if (a.req.type == 'total_clicks' && totalclicks >= a.req.amount) ok = true;
-    if (a.req.type == 'score' && TotalScore >= a.req.amount) ok = true;
-    if (a.req.type == 'total_buildings' && tb >= a.req.amount) ok = true;
-    if (a.req.type == 'specific_building' && (buildings[a.req.id] || 0) >= a.req.amount) ok = true;
-    if (a.req.type == 'dim' && dim >= a.req.amount) ok = true;
-    if (ok) { achs.push(a.id); showAch(a.name); save(); }
+  const clickArea = document.getElementById('clickArea');
+  if (clickArea) {
+    textElement.style.left = (Math.random() * 100 + 20) + 'px';
+    textElement.style.top = (Math.random() * 40 + 40) + 'px';
+    clickArea.appendChild(textElement);
+    setTimeout(() => { textElement.remove(); }, 1000);
+  } else {
+    setTimeout(() => { textElement.remove(); }, 1000);
   }
 }
-function showAch(name){ var p = document.getElementById('achievementPopup'); var t = document.getElementById('achText'); if(!p||!t) return; t.innerText = name; p.classList.add('show'); setTimeout(function(){ p.classList.remove('show'); }, 3000); }
 
-// Save / load / export / import
-function save(){
-  var data = { s: score, ts: TotalScore, tc: totalclicks, bc: baseClick, b: JSON.stringify(buildings), u: JSON.stringify(ups), a: JSON.stringify(achs), d: dim, pu: JSON.stringify(prestigeUps) };
-  try{ localStorage.setItem("save3", JSON.stringify(data)); } catch(e){}
+function showWelcomeModal() {
+  const welcomeModal = document.getElementById('welcomeModal');
+  if (welcomeModal) welcomeModal.style.display = 'flex';
 }
-function load(){
-  var d = null;
-  try{ d = localStorage.getItem("save3"); } catch(e){ d = null; }
-  if (d) {
+
+function closeWelcomeModal(savePreference) {
+  const welcomeModal = document.getElementById('welcomeModal');
+  if (!welcomeModal) return;
+  welcomeModal.style.display = 'none';
+
+  if (savePreference) {
     try {
-      var p = JSON.parse(d);
-      score = p.s || 0;
-      TotalScore = p.ts || 0;
-      totalclicks = p.tc || 0;
-      baseClick = p.bc || 1;
-      buildings = p.b ? JSON.parse(p.b) : {};
-      ups = p.u ? JSON.parse(p.u) : [];
-      achs = p.a ? JSON.parse(p.a) : [];
-      dim = p.d || 0;
-      prestigeUps = p.pu ? JSON.parse(p.pu) : [];
-      calcPermStats();
-    } catch(e) {}
+      localStorage.setItem('seenWelcome', '1');
+    } catch (e) { }
   }
 }
 
-// Export save to clipboard
+function verifyWelcomePreference() {
+  try {
+    const hasSeenWelcome = localStorage.getItem('seenWelcome');
+    if (!hasSeenWelcome) showWelcomeModal();
+  } catch (e) { }
+}
+
+function startNewsTicker() {
+  const tickerElement = document.getElementById('newsText');
+  if (!tickerElement) return;
+
+  const updateTickerText = () => {
+    const randomNews = newsFeed[Math.floor(Math.random() * newsFeed.length)];
+    tickerElement.innerText = `${randomNews}     +++     ${randomNews}     +++     `;
+  };
+
+  updateTickerText();
+  setInterval(updateTickerText, 30000);
+}
+
+function checkAchievements() {
+  let totalBuildingsCount = 0;
+  for (const key in ownedBuildings) {
+    totalBuildingsCount += ownedBuildings[key];
+  }
+
+  for (let i = 0; i < achievementsData.length; i++) {
+    const achievement = achievementsData[i];
+    if (unlockedAchievements.indexOf(achievement.id) !== -1) continue;
+
+    let conditionMet = false;
+    if (achievement.req.type === 'total_clicks' && totalClicks >= achievement.req.amount) conditionMet = true;
+    if (achievement.req.type === 'score' && totalScore >= achievement.req.amount) conditionMet = true;
+    if (achievement.req.type === 'total_buildings' && totalBuildingsCount >= achievement.req.amount) conditionMet = true;
+    if (achievement.req.type === 'specific_building' && (ownedBuildings[achievement.req.id] || 0) >= achievement.req.amount) conditionMet = true;
+    if (achievement.req.type === 'dim' && diamonds >= achievement.req.amount) conditionMet = true;
+
+    if (conditionMet) {
+      unlockedAchievements.push(achievement.id);
+      triggerAchievementPopup(achievement.name);
+      saveGame();
+    }
+  }
+}
+
+function triggerAchievementPopup(name) {
+  const popup = document.getElementById('achievementPopup');
+  const textContainer = document.getElementById('achText');
+  if (!popup || !textContainer) return;
+
+  textContainer.innerText = name;
+  popup.classList.add('show');
+  setTimeout(() => { popup.classList.remove('show'); }, 3000);
+}
+
+function saveGame() {
+  const gameState = {
+    s: score,
+    ts: totalScore,
+    tc: totalClicks,
+    bc: baseClickPower,
+    b: JSON.stringify(ownedBuildings),
+    u: JSON.stringify(purchasedUpgrades),
+    a: JSON.stringify(unlockedAchievements),
+    d: diamonds,
+    pu: JSON.stringify(purchasedPrestigeUpgrades)
+  };
+  try {
+    localStorage.setItem("save3", JSON.stringify(gameState));
+  } catch (e) { }
+}
+
+function loadGame() {
+  let savedData = null;
+  try {
+    savedData = localStorage.getItem("save3");
+  } catch (e) {
+    savedData = null;
+  }
+
+  if (savedData) {
+    try {
+      const parsedState = JSON.parse(savedData);
+      score = parsedState.s || 0;
+      totalScore = parsedState.ts || 0;
+      totalClicks = parsedState.tc || 0;
+      baseClickPower = parsedState.bc || 1;
+      ownedBuildings = parsedState.b ? JSON.parse(parsedState.b) : {};
+      purchasedUpgrades = parsedState.u ? JSON.parse(parsedState.u) : [];
+      unlockedAchievements = parsedState.a ? JSON.parse(parsedState.a) : [];
+      diamonds = parsedState.d || 0;
+      purchasedPrestigeUpgrades = parsedState.pu ? JSON.parse(parsedState.pu) : [];
+      calculatePermanentStats();
+    } catch (e) { }
+  }
+}
+
 function exportSaveToClipboard() {
   try {
-    var d = localStorage.getItem("save3");
-    if (!d) d = JSON.stringify({});
+    let savedString = localStorage.getItem("save3");
+    if (!savedString) savedString = JSON.stringify({});
+
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(d).then(function(){ alert("Save copied to clipboard."); }, function(){ prompt("Copy this save string:", d); });
+      navigator.clipboard.writeText(savedString).then(() => {
+        alert("Save copied to clipboard.");
+      }, () => {
+        prompt("Copy this save string:", savedString);
+      });
     } else {
-      prompt("Copy this save string:", d);
+      prompt("Copy this save string:", savedString);
     }
-  } catch(e) { alert("Export failed: " + e); }
+  } catch (e) {
+    alert("Export failed: " + e);
+  }
 }
 
-// Download save as file
 function downloadSaveFile() {
   try {
-    var d = localStorage.getItem("save3") || JSON.stringify({});
-    var blob = new Blob([d], { type: "application/json" });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = 'clicker-save.json';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  } catch(e) { alert("Download failed: " + e); }
+    const rawData = localStorage.getItem("save3") || JSON.stringify({});
+    const blob = new Blob([rawData], { type: "application/json" });
+    const downloadUrl = URL.createObjectURL(blob);
+    const downloadAnchor = document.createElement('a');
+
+    downloadAnchor.href = downloadUrl;
+    downloadAnchor.download = 'clicker-save.json';
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    URL.revokeObjectURL(downloadUrl);
+  } catch (e) {
+    alert("Download failed: " + e);
+  }
 }
 
-// Import save from string
-function importSaveFromString(str) {
+function importSaveFromString(saveStr) {
   try {
-    var p = typeof str === 'string' ? JSON.parse(str) : str;
-    if (!p) throw new Error("Invalid save");
-    localStorage.setItem("save3", JSON.stringify(p));
-    load();
-    domath();
-    renderb();
-    renderu();
-    upd();
+    const parsedData = typeof saveStr === 'string' ? JSON.parse(saveStr) : saveStr;
+    if (!parsedData) throw new Error("Invalid save file structure");
+
+    localStorage.setItem("save3", JSON.stringify(parsedData));
+    loadGame();
+    updateGameMultipliers();
+    renderBuildings();
+    renderUpgrades();
+    updateUI();
     alert("Save imported successfully.");
-  } catch(e) {
+  } catch (e) {
     alert("Import failed: invalid file or format.");
   }
 }
 
 function promptImport() {
-  var s = prompt("Paste the save string here and press OK:");
-  if (s) importSaveFromString(s);
+  const userInput = prompt("Paste the save string here and press OK:");
+  if (userInput) importSaveFromString(userInput);
 }
 
-// Upload file input handling
-var saveFileInput = document.getElementById('saveFileInput');
+const saveFileInput = document.getElementById('saveFileInput');
 if (saveFileInput) {
-  saveFileInput.addEventListener('change', function(e) {
-    var f = e.target.files[0];
-    if (!f) return;
-    var reader = new FileReader();
-    reader.onload = function(ev) {
-      var txt = ev.target.result;
-      importSaveFromString(txt);
+  saveFileInput.addEventListener('change', (e) => {
+    const chosenFile = e.target.files[0];
+    if (!chosenFile) return;
+
+    const fileReader = new FileReader();
+    fileReader.onload = (event) => {
+      importSaveFromString(event.target.result);
       saveFileInput.value = '';
     };
-    reader.readAsText(f);
+    fileReader.readAsText(chosenFile);
   });
 }
 
-// Reset save
 function resetSave() {
   if (!confirm("Reset save? This will clear local progress.")) return;
-  try { localStorage.removeItem("save3"); } catch(e){}
-  score = 0; TotalScore = 0; totalclicks = 0; buildings = {}; ups = []; achs = []; dim = 0; prestigeUps = [];
-  domath(); renderb(); renderu(); upd(); save();
-  showFloat("Save reset", false);
+  try {
+    localStorage.removeItem("save3");
+  } catch (e) { }
+
+  score = 0;
+  totalScore = 0;
+  totalClicks = 0;
+  ownedBuildings = {};
+  purchasedUpgrades = [];
+  unlockedAchievements = [];
+  diamonds = 0;
+  purchasedPrestigeUpgrades = [];
+
+  updateGameMultipliers();
+  renderBuildings();
+  renderUpgrades();
+  updateUI();
+  saveGame();
+  createFloatingText("Save reset", false);
 }
 
-// Auto-buyer (new): buys the best CPS/cost building automatically
-var autoBuyerEnabled = false;
-var autoBuyerIntervalMs = 3000;
-var autoBuyerTimer = null;
+let autoBuyerEnabled = false;
+const autoBuyerIntervalMs = 3000;
+let autoBuyerTimer = null;
 
-// compute next cost for building index i
-function nextCostFor(i) {
-  var b = bdata[i];
-  var owned = buildings[b.id] || 0;
-  return getc(b.baseCost, b.costMult, owned);
+function fetchNextCostForBuilding(index) {
+  const building = buildingsData[index];
+  const amountOwned = ownedBuildings[building.id] || 0;
+  return calculateBuildingCost(building.baseCost, building.costMult, amountOwned);
 }
 
-// compute best-value index (CPS per cost)
 function computeBestValueIndex() {
-  var bestIdx = null;
-  var bestScore = 0;
-  for (var i = 0; i < bdata.length; i++) {
-    if (!isUnlocked(i)) continue;
-    var b = bdata[i];
-    var cost = nextCostFor(i);
+  let highestValueIdx = null;
+  let bestScoreRatio = 0;
+
+  for (let i = 0; i < buildingsData.length; i++) {
+    if (!isBuildingUnlocked(i)) continue;
+    const building = buildingsData[i];
+    const cost = fetchNextCostForBuilding(i);
     if (!isFinite(cost) || cost <= 0) continue;
-    var owned = buildings[b.id] || 0;
-    var syn = Math.floor((owned + 1) / 10) + 1;
-    var sm = bMults[b.id] || 1;
-    var effCps = b.baseCps * syn * sm * globalMult * dimMult;
-    var value = effCps / cost;
-    if (value > bestScore) { bestScore = value; bestIdx = i; }
+
+    const amountOwned = ownedBuildings[building.id] || 0;
+    const synergyMultiplier = Math.floor((amountOwned + 1) / 10) + 1;
+    const specificMultiplier = buildingMultipliers[building.id] || 1;
+    const efficientCps = building.baseCps * synergyMultiplier * specificMultiplier * globalMultiplier * diamondMultiplier;
+    const efficiencyRatio = efficientCps / cost;
+
+    if (efficiencyRatio > bestScoreRatio) {
+      bestScoreRatio = efficiencyRatio;
+      highestValueIdx = i;
+    }
   }
-  return bestIdx;
+  return highestValueIdx;
 }
 
-function autoBuyerTick() {
+function runAutoBuyerTick() {
   if (!autoBuyerEnabled) return;
-  var idx = computeBestValueIndex();
-  if (idx === null || idx === undefined) return;
-  var b = bdata[idx];
-  buyMax(b.id, idx);
+  const bestIndex = computeBestValueIndex();
+  if (bestIndex === null || bestIndex === undefined) return;
+
+  const building = buildingsData[bestIndex];
+  buyMaxBuildings(building.id, bestIndex);
 }
 
-function updateAutoBuyerButton() {
-  var btn = document.getElementById('autoBuyerBtn');
-  if (!btn) return;
-  btn.innerText = 'Auto-buyer: ' + (autoBuyerEnabled ? 'ON' : 'OFF');
-  btn.style.opacity = autoBuyerEnabled ? '1' : '0.85';
+function updateAutoBuyerButtonState() {
+  const toggleBtn = document.getElementById('autoBuyerBtn');
+  if (!toggleBtn) return;
+  toggleBtn.innerText = 'Auto-buyer: ' + (autoBuyerEnabled ? 'ON' : 'OFF');
+  toggleBtn.style.opacity = autoBuyerEnabled ? '1' : '0.85';
 }
 
 function toggleAutoBuyer() {
   autoBuyerEnabled = !autoBuyerEnabled;
+
   if (autoBuyerEnabled) {
-    autoBuyerTimer = setInterval(autoBuyerTick, autoBuyerIntervalMs);
-    showFloat("Auto-buyer ON", false);
+    autoBuyerTimer = setInterval(runAutoBuyerTick, autoBuyerIntervalMs);
+    createFloatingText("Auto-buyer ON", false);
   } else {
     if (autoBuyerTimer) clearInterval(autoBuyerTimer);
     autoBuyerTimer = null;
-    showFloat("Auto-buyer OFF", false);
+    createFloatingText("Auto-buyer OFF", false);
   }
-  try { localStorage.setItem('autoBuyerEnabled', autoBuyerEnabled ? '1' : '0'); } catch(e){}
-  updateAutoBuyerButton();
+
+  try {
+    localStorage.setItem('autoBuyerEnabled', autoBuyerEnabled ? '1' : '0');
+  } catch (e) { }
+  updateAutoBuyerButtonState();
 }
 
-// Expose helpers to window
 window.exportSaveToClipboard = exportSaveToClipboard;
 window.downloadSaveFile = downloadSaveFile;
 window.importSaveFromString = importSaveFromString;
@@ -723,101 +954,98 @@ window.promptImport = promptImport;
 window.toggleAutoBuyer = toggleAutoBuyer;
 window.resetSave = resetSave;
 
-// Playtime / stats update
-function updateStatsDisplay() {
-  var playtimeEl = document.getElementById('playtimeStat');
-  if (playtimeEl) {
-    var elapsed = Math.floor((Date.now() - sessionStartTs) / 1000);
-    playtimeEl.innerText = formatTimeSeconds(elapsed);
+function updatePlaytimeDisplay() {
+  const playtimeElement = document.getElementById('playtimeStat');
+  if (playtimeElement) {
+    const elapsedSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
+    playtimeElement.innerText = formatTime(elapsedSeconds);
   }
-  // total buildings already handled in upd()
 }
 
-// Main init
-window.onload = function() {
-  // Welcome modal buttons
-  var closeBtn = document.getElementById('welcomeClose');
-  var dontShow = document.getElementById('welcomeDontShow');
-  if (closeBtn) closeBtn.addEventListener('click', function(){ closeWelcomeModal(true); });
-  if (dontShow) dontShow.addEventListener('click', function(){ closeWelcomeModal(true); });
+window.onload = function () {
+  const modalCloseButton = document.getElementById('welcomeClose');
+  const modalDismissButton = document.getElementById('welcomeDontShow');
 
-  // Load state
-  load();
-  domath();
-  renderb();
-  renderu();
-  upd();
-  startNews();
+  if (modalCloseButton) modalCloseButton.addEventListener('click', () => { closeWelcomeModal(true); });
+  if (modalDismissButton) modalDismissButton.addEventListener('click', () => { closeWelcomeModal(true); });
 
-  // init golden cookie
-  initGolden();
+  loadGame();
+  updateGameMultipliers();
+  renderBuildings();
+  renderUpgrades();
+  updateUI();
+  startNewsTicker();
+  initializeGoldenCookie();
 
-  // set auto-buyer state from storage
   try {
-    var ab = localStorage.getItem('autoBuyerEnabled');
-    if (ab === '1') { autoBuyerEnabled = true; autoBuyerTimer = setInterval(autoBuyerTick, autoBuyerIntervalMs); }
-  } catch(e){}
-  updateAutoBuyerButton();
+    const cachedAutoBuyerState = localStorage.getItem('autoBuyerEnabled');
+    if (cachedAutoBuyerState === '1') {
+      autoBuyerEnabled = true;
+      autoBuyerTimer = setInterval(runAutoBuyerTick, autoBuyerIntervalMs);
+    }
+  } catch (e) { }
+  updateAutoBuyerButtonState();
 
-  // autosave every 0.5s
   if (!window._autosaveTimer) {
-    window._autosaveTimer = setInterval(function(){ try{ save(); }catch(e){} }, 500);
+    window._autosaveTimer = setInterval(() => {
+      try { saveGame(); } catch (e) { }
+    }, 500);
   }
 
-  // wire main click (pointerdown for touch)
-  var clickBtn = document.getElementById('clickBtn');
-  if (clickBtn) {
-    clickBtn.addEventListener('pointerdown', function(e){
+  const mainClickButton = document.getElementById('clickBtn');
+  if (mainClickButton) {
+    mainClickButton.addEventListener('pointerdown', (e) => {
       e.preventDefault();
-      var p = getPow();
-      score += p;
-      TotalScore += p;
-      totalclicks++;
-      upd();
-      save();
-      checkachs();
-      var f = document.createElement('div');
-      f.className = 'floating-text';
-      f.innerText = '+' + fmtNum(p);
-      var area = document.getElementById('clickArea');
-      if (area) {
-        var r = area.getBoundingClientRect();
-        var left = (e.clientX - r.left - 20);
-        var top = (e.clientY - r.top - 20);
-        f.style.left = (isNaN(left) ? (r.width/2 - 20) : left) + 'px';
-        f.style.top = (isNaN(top) ? (r.height/2 - 20) : top) + 'px';
-        area.appendChild(f);
+      const clickPower = getClickPower();
+
+      score += clickPower;
+      totalScore += clickPower;
+      totalClicks++;
+
+      updateUI();
+      saveGame();
+      checkAchievements();
+
+      const floatingTextElement = document.createElement('div');
+      floatingTextElement.className = 'floating-text';
+      floatingTextElement.innerText = '+' + formatNumber(clickPower);
+
+      const clickArea = document.getElementById('clickArea');
+      if (clickArea) {
+        const areaBounds = clickArea.getBoundingClientRect();
+        const calculatedLeft = (e.clientX - areaBounds.left - 20);
+        const calculatedTop = (e.clientY - areaBounds.top - 20);
+
+        floatingTextElement.style.left = (isNaN(calculatedLeft) ? (areaBounds.width / 2 - 20) : calculatedLeft) + 'px';
+        floatingTextElement.style.top = (isNaN(calculatedTop) ? (areaBounds.height / 2 - 20) : calculatedTop) + 'px';
+        clickArea.appendChild(floatingTextElement);
       }
-      setTimeout(function(){ f.remove(); }, 1000);
+      setTimeout(() => { floatingTextElement.remove(); }, 1000);
     });
   }
 
-  // Upload input already wired earlier by top-level code (in global scope)
+  verifyWelcomePreference();
 
-  // show welcome if first time
-  showWelcomeIfNeeded();
-
-  // playtime updater
   if (!playtimeTimer) {
-    sessionStartTs = Date.now();
-    playtimeTimer = setInterval(updateStatsDisplay, 1000);
+    sessionStartTime = Date.now();
+    playtimeTimer = setInterval(updatePlaytimeDisplay, 1000);
   }
-  updateStatsDisplay();
+  updatePlaytimeDisplay();
 
-  // game loop
-  var lastTime = performance.now();
-  function gameLoop(time) {
-    var dt = (time - lastTime) / 1000;
-    lastTime = time;
-    if (dt > 1) dt = 1;
-    if (perSec > 0) {
-      var gain = perSec * dt;
-      score += gain;
-      TotalScore += gain;
-      upd();
-      checkachs();
+  let standardLastTime = performance.now();
+  function coreGameLoop(currentTime) {
+    let delta = (currentTime - standardLastTime) / 1000;
+    standardLastTime = currentTime;
+
+    if (delta > 1) delta = 1;
+    if (pointsPerSecond > 0) {
+      const generatedPoints = pointsPerSecond * delta;
+      score += generatedPoints;
+      totalScore += generatedPoints;
+      updateUI();
+      checkAchievements();
     }
-    requestAnimationFrame(gameLoop);
+    requestAnimationFrame(coreGameLoop);
   }
-  requestAnimationFrame(gameLoop);
+  requestAnimationFrame(coreGameLoop);
 };
