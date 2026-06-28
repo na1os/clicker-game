@@ -11,10 +11,9 @@
 </head>
 <body>
 
-  <!-- Golden cookie (hidden by default in CSS) -->
   <div id="goldenCookie" class="golden-cookie" aria-hidden="true"><i class="fas fa-star"></i></div>
 
-  <!-- Achievement popup -->
+
   <div id="achievementPopup" class="achievement-popup" aria-live="polite">
       <div class="ach-icon"><i class="fas fa-trophy"></i></div>
       <div class="ach-text-wrap">
@@ -23,7 +22,7 @@
       </div>
   </div>
 
-  <!-- Prestige modal -->
+
   <div id="prestigeShopModal" class="prestige-modal" style="display:none;">
     <div class="prestige-modal-content">
       <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -34,7 +33,7 @@
     </div>
   </div>
 
-  <!-- Welcome modal (first visit) -->
+
   <div id="welcomeModal" class="welcome-modal" style="display:none;">
     <div class="welcome-modal-content">
       <h2>Welcome!</h2>
@@ -49,7 +48,7 @@
     </div>
   </div>
 
-  <!-- Toolbar (auto-buyer, export/import, stats) -->
+
   <div class="toolbar" style="position:fixed; right:28px; top:28px; z-index:80; display:flex; gap:8px; align-items:center;">
     <button class="buy-btn" onclick="exportSaveToClipboard()" title="Copy save to clipboard">Export</button>
     <button class="buy-btn" onclick="promptImport()" title="Paste save string">Import</button>
@@ -58,7 +57,7 @@
     <input id="saveFileInput" type="file" accept=".json" style="display:none">
   </div>
 
-  <!-- Prestige floating button -->
+
   <div id="prestigeBtn" class="prestige-btn" onclick="togglePrestigeShop()">
       <i class="fas fa-gem"></i> PRESTIGE
       <div class="prestige-info" style="margin-left:8px; font-weight:700;">
@@ -75,14 +74,6 @@
           <div class="hud-item">
               <i class="fas fa-bolt"></i>
               <span id="perSecStat">0</span> / sec
-          </div>
-          <div class="hud-item">
-              <i class="fas fa-clock"></i>
-              <span id="playtimeStat">00:00:00</span>
-          </div>
-          <div class="hud-item">
-              <i class="fas fa-building"></i>
-              <span id="totalBuildingsStat">0</span> buildings
           </div>
           <div class="hud-item diamond-hud" style="border-color: rgba(138, 43, 226, 0.5); color: #a855f7; margin-left:auto;">
               <i class="fas fa-gem"></i>
