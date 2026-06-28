@@ -51,12 +51,10 @@
 
   <!-- Toolbar (auto-buyer, export/import, stats) -->
   <div class="toolbar" style="position:fixed; right:28px; top:28px; z-index:80; display:flex; gap:8px; align-items:center;">
-    <button id="autoBuyerBtn" class="buy-btn" style="padding:8px 10px; font-weight:700;" onclick="toggleAutoBuyer()">Auto-buyer: OFF</button>
     <button class="buy-btn" onclick="exportSaveToClipboard()" title="Copy save to clipboard">Export</button>
     <button class="buy-btn" onclick="promptImport()" title="Paste save string">Import</button>
     <button class="buy-btn" onclick="downloadSaveFile()" title="Download save file">Download</button>
     <button class="buy-btn" onclick="document.getElementById('saveFileInput').click()" title="Upload save file">Upload</button>
-    <button class="buy-btn" onclick="resetSave()" title="Reset save (confirm)">Reset</button>
     <input id="saveFileInput" type="file" accept=".json" style="display:none">
   </div>
 
