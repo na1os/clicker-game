@@ -1,81 +1,119 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Clicker Game Pro</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Clicker Game Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div id="goldenCookie" class="golden-cookie"><i class="fas fa-star"></i></div>
+  <!-- Golden cookie (hidden by default in CSS) -->
+  <div id="goldenCookie" class="golden-cookie" aria-hidden="true"><i class="fas fa-star"></i></div>
 
-    <div id="achievementPopup" class="achievement-popup">
-        <div class="ach-icon"><i class="fas fa-trophy"></i></div>
-        <div class="ach-text-wrap">
-            <strong>Achievement Unlocked!</strong>
-            <span id="achText">Name</span>
-        </div>
+  <!-- Achievement popup -->
+  <div id="achievementPopup" class="achievement-popup" aria-live="polite">
+      <div class="ach-icon"><i class="fas fa-trophy"></i></div>
+      <div class="ach-text-wrap">
+          <strong>Achievement Unlocked!</strong>
+          <span id="achText">Name</span>
+      </div>
+  </div>
+
+  <!-- Prestige modal -->
+  <div id="prestigeShopModal" class="prestige-modal" style="display:none;">
+    <div class="prestige-modal-content">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <h2 style="margin:0">Diamond Upgrades <span style="color:#a855f7; font-size:0.9rem;">(<i class="fas fa-gem"></i> <span id="dimStatModal">0</span>)</span></h2>
+        <button onclick="closePrestigeShop()" style="background:none;border:none;color:white;font-size:1.3rem;cursor:pointer;">×</button>
+      </div>
+      <div id="prestigeShopGrid" class="prestige-shop-grid"></div>
     </div>
+  </div>
 
-    <div id="prestigeShopModal" class="prestige-modal" style="display:none;">
-        <div class="prestige-modal-content">
-            <div class="prestige-modal-header">
-                <h2>Diamond Upgrades <span style="color:#a855f7; font-size:0.8rem;">(<i class="fas fa-gem"></i> <span id="dimStatModal">0</span>)</span></h2>
-                <button onclick="closePrestigeShop()" style="background:none;border:none;color:white;font-size:1.5rem;cursor:pointer;">x</button>
-            </div>
-            <div id="prestigeShopGrid" class="prestige-shop-grid"></div>
-        </div>
+  <!-- Welcome modal (first visit) -->
+  <div id="welcomeModal" class="welcome-modal" style="display:none;">
+    <div class="welcome-modal-content">
+      <h2>Welcome!</h2>
+      <p>
+        Play longer to use PRESTIGE and unlock permanent upgrades that boost your clicks and production.
+        To access more advanced clickers you usually need to buy a larger amount of the previous clicker (e.g. buy more Cursors to unlock Robots).
+      </p>
+      <div class="welcome-actions">
+        <button id="welcomeClose" class="buy-btn">Got it</button>
+        <button id="welcomeDontShow" class="buy-btn" style="background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)">Don't show again</button>
+      </div>
     </div>
+  </div>
 
-    <div id="prestigeBtn" class="prestige-btn" onclick="togglePrestigeShop()">
-        <i class="fas fa-gem"></i> PRESTIGE
-        <div class="prestige-info">
-            Gain: <span id="prestigeGain">0</span> Diamonds
-        </div>
-    </div>
+  <!-- Toolbar (auto-buyer, export/import, stats) -->
+  <div class="toolbar" style="position:fixed; right:28px; top:28px; z-index:80; display:flex; gap:8px; align-items:center;">
+    <button id="autoBuyerBtn" class="buy-btn" style="padding:8px 10px; font-weight:700;" onclick="toggleAutoBuyer()">Auto-buyer: OFF</button>
+    <button class="buy-btn" onclick="exportSaveToClipboard()" title="Copy save to clipboard">Export</button>
+    <button class="buy-btn" onclick="promptImport()" title="Paste save string">Import</button>
+    <button class="buy-btn" onclick="downloadSaveFile()" title="Download save file">Download</button>
+    <button class="buy-btn" onclick="document.getElementById('saveFileInput').click()" title="Upload save file">Upload</button>
+    <button class="buy-btn" onclick="resetSave()" title="Reset save (confirm)">Reset</button>
+    <input id="saveFileInput" type="file" accept=".json" style="display:none">
+  </div>
 
-<div class="game-wrapper">
-    
-    <header class="top-hud">
-        <div class="hud-item">
-            <i class="fas fa-mouse-pointer"></i> 
-            <span id="perClickStat">1</span> / click
-        </div>
-        <div class="hud-item">
-            <i class="fas fa-bolt"></i> 
-            <span id="perSecStat">0</span> / sec
-        </div>
-        <div class="hud-item diamond-hud" style="border-color: rgba(138, 43, 226, 0.5); color: #a855f7;">
-            <i class="fas fa-gem"></i> 
-            <span id="dimStat">0</span>
-        </div>
-    </header>
+  <!-- Prestige floating button -->
+  <div id="prestigeBtn" class="prestige-btn" onclick="togglePrestigeShop()">
+      <i class="fas fa-gem"></i> PRESTIGE
+      <div class="prestige-info" style="margin-left:8px; font-weight:700;">
+          <span id="prestigeGain">0</span>
+      </div>
+  </div>
 
-    <div class="click-area" id="clickArea">
-        <div class="btn-glow"></div>
-        <button id="clickBtn">0</button>
-    </div>
+  <div class="game-wrapper">
+      <header class="top-hud">
+          <div class="hud-item">
+              <i class="fas fa-mouse-pointer"></i>
+              <span id="perClickStat">1</span> / click
+          </div>
+          <div class="hud-item">
+              <i class="fas fa-bolt"></i>
+              <span id="perSecStat">0</span> / sec
+          </div>
+          <div class="hud-item">
+              <i class="fas fa-clock"></i>
+              <span id="playtimeStat">00:00:00</span>
+          </div>
+          <div class="hud-item">
+              <i class="fas fa-building"></i>
+              <span id="totalBuildingsStat">0</span> buildings
+          </div>
+          <div class="hud-item diamond-hud" style="border-color: rgba(138, 43, 226, 0.5); color: #a855f7; margin-left:auto;">
+              <i class="fas fa-gem"></i>
+              <span id="dimStat">0</span>
+          </div>
+      </header>
 
-    <div class="shop-container">
-        <div class="shop-section">
-            <h2 class="section-title"><i class="fas fa-city"></i> Buildings</h2>
-            <div class="upgrade-grid" id="buildingsContainer"></div>
-        </div>
+      <div class="click-area" id="clickArea">
+          <div class="btn-glow"></div>
+          <button id="clickBtn" aria-label="Click">0</button>
+      </div>
 
-        <div class="shop-section">
-            <h2 class="section-title"><i class="fas fa-flask"></i> Upgrades</h2>
-            <div class="upgrade-grid pills-grid" id="upgradesContainer"></div>
-        </div>
-    </div>
+      <div class="shop-container">
+          <div class="shop-section">
+              <h2 class="section-title"><i class="fas fa-city"></i> Buildings</h2>
+              <div class="upgrade-grid" id="buildingsContainer"></div>
+          </div>
 
-</div>
+          <div class="shop-section">
+              <h2 class="section-title"><i class="fas fa-flask"></i> Upgrades</h2>
+              <div class="upgrade-grid pills-grid" id="upgradesContainer"></div>
+          </div>
+      </div>
+  </div>
 
-<div class="news-bar">
-    <div id="newsText" class="news-text">Loading news...</div>
-</div>
+  <div class="news-bar">
+      <div id="newsText" class="news-text">Loading news...</div>
+  </div>
 
-<script src="scrpit.js"></script>
+  <script src="scrpit.js"></script>
 </body>
 </html>
